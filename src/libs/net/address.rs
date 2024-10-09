@@ -1,0 +1,25 @@
+use core::fmt;
+
+pub enum AddressInput {
+    IpAndPort(String, u16),
+    Address(Address),
+}
+
+pub struct Address {
+    ip: String,
+    port: u16,
+}
+impl Address {
+    pub fn new(ip: &str, port: u16) -> Self {
+        return Address {
+            ip: ip.to_string(),
+            port: port,
+        };
+    }
+}
+
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}", self.ip, self.port)
+    }
+}
