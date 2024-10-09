@@ -15,5 +15,7 @@ fn main() {
     println!("Keyvalue store test: {} -> {}", key, node.store.get(key));
     node.print_info();
 
+    node.run();
+
     println!("Works fine!");
 }

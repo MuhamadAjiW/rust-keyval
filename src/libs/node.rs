@@ -1,10 +1,8 @@
+use std::{io::Error, net::TcpStream};
+
 use super::{
     app::store::Store,
-    net::{
-        address::{self, Address, AddressInput},
-        client::Client,
-        server::Server,
-    },
+    net::{address::AddressInput, client::Client, server::Server},
 };
 
 pub struct Node {
@@ -25,5 +23,19 @@ impl Node {
     pub fn print_info(&self) {
         println!("Node info:");
         println!("Address: {}", self.server.address.to_string())
+    }
+
+    pub fn run(&self) {
+        fn success_handler(stream: TcpStream) {
+            println!(
+                "Accepted a connection from: {:?}",
+                stream.peer_addr().unwrap()
+            );
+        }
+        fn fail_handler(e: Error) {
+            eprintln!("Failed to accept connection: {}", e);
+        }
+
+        self.server.run(success_handler, fail_handler);
     }
 }

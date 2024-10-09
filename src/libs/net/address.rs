@@ -6,8 +6,8 @@ pub enum AddressInput {
 }
 
 pub struct Address {
-    ip: String,
-    port: u16,
+    pub ip: String,
+    pub port: u16,
 }
 impl Address {
     pub fn new(ip: &str, port: u16) -> Self {
