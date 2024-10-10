@@ -18,10 +18,10 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(input: AddressInput) -> Self {
+    pub fn new(input: AddressInput, thread_count: usize) -> Self {
         return Node {
             client: Client::new(),
-            server: Server::new(input),
+            server: Server::new(input, thread_count),
             store: Arc::new(RwLock::new(Store::new())),
         };
     }

@@ -2,17 +2,20 @@ use std::{
     io::Error,
     net::{TcpListener, TcpStream},
     sync::Arc,
-    thread,
+    thread::{self, Thread},
 };
+
+use threadpool::ThreadPool;
 
 use super::address::{Address, AddressInput};
 
 pub struct Server {
     pub address: Address,
     pub listener: TcpListener,
+    pool: ThreadPool,
 }
 impl Server {
-    pub fn new(input: AddressInput) -> Self {
+    pub fn new(input: AddressInput, thread_count: usize) -> Self {
         let address: Address;
         match input {
             AddressInput::Address(addr) => address = addr,
@@ -22,7 +25,13 @@ impl Server {
         let listener = TcpListener::bind((address.ip.as_str(), address.port))
             .expect("Failed to bind to address");
 
-        return Server { address, listener };
+        let pool = ThreadPool::new(thread_count);
+
+        return Server {
+            address,
+            listener,
+            pool,
+        };
     }
 
     pub fn run<F, G>(&self, success_handler: F, fail_handler: G)
@@ -39,13 +48,13 @@ impl Server {
             match stream {
                 Ok(stream) => {
                     let handler = Arc::clone(&success_handler);
-                    thread::spawn(move || {
+                    self.pool.execute(move || {
                         handler(stream);
                     });
                 }
                 Err(e) => {
                     let handler = Arc::clone(&fail_handler);
-                    thread::spawn(move || {
+                    self.pool.execute(move || {
                         handler(e);
                     });
                 }
