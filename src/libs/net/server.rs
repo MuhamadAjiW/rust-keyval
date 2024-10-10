@@ -2,7 +2,6 @@ use std::{
     io::Error,
     net::{TcpListener, TcpStream},
     sync::Arc,
-    thread::{self, Thread},
 };
 
 use threadpool::ThreadPool;
@@ -41,8 +40,8 @@ impl Server {
     {
         println!("Server running at {}", self.address);
 
-        let success_handler = std::sync::Arc::new(success_handler);
-        let fail_handler = std::sync::Arc::new(fail_handler);
+        let success_handler = Arc::new(success_handler);
+        let fail_handler = Arc::new(fail_handler);
 
         for stream in self.listener.incoming() {
             match stream {

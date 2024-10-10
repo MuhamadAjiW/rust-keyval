@@ -1,5 +1,5 @@
 use std::{
-    io::Error,
+    io::{Error, Write},
     net::TcpStream,
     sync::{Arc, RwLock},
 };
@@ -34,30 +34,57 @@ impl Node {
     pub fn run(&self) {
         let store_clone = Arc::clone(&self.store);
 
-        let success_handler = move |stream: TcpStream| {
+        let success_handler = move |mut stream: TcpStream| {
             println!(
                 "Accepted a connection from: {:?}",
                 stream.peer_addr().unwrap()
             );
 
-            if let Some(request) = Request::parse(stream) {
+            loop {
+                let request = Request::parse(&mut stream);
+                if request.is_none() {
+                    println!("Connection ended: {:?}", stream.peer_addr().unwrap());
+                    break;
+                }
+
+                let request = request.unwrap();
+                let response: String;
+
                 match request.reqtype {
+                    RequestType::BAD => {
+                        response = format!("Bad command received\n");
+                    }
                     RequestType::GET => {
-                        let value = store_clone.read().unwrap().get(&request.key);
-                        println!("{value}");
+                        response = format!("{}\n", store_clone.read().unwrap().get(&request.key));
                     }
                     RequestType::SET => {
-                        store_clone.write().unwrap().set(
-                            &request.key.clone(),
-                            &request.val.clone().unwrap_or_default(),
-                        );
+                        store_clone
+                            .write()
+                            .unwrap()
+                            .set(&request.key.clone(), &request.val.clone());
+                        response = "OK\n".to_string();
                     }
                     RequestType::REMOVE => {
                         store_clone.write().unwrap().remove(&request.key);
+                        response = "OK\n".to_string();
+                    }
+                    RequestType::TERMINATE => {
+                        println!(
+                            "Termination command received: {:?}",
+                            stream.peer_addr().unwrap()
+                        );
+                        response = "Termination command received...\n".to_string();
                     }
                 }
-            } else {
-                eprintln!("Bad command received");
+
+                if let Err(e) = stream.write_all(response.as_bytes()) {
+                    eprintln!("Error received: {}", e);
+                    break;
+                }
+
+                if request.reqtype == RequestType::TERMINATE {
+                    return;
+                }
             }
         };
 
