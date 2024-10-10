@@ -1,6 +1,7 @@
 use std::{
     io::Error,
     net::{TcpListener, TcpStream},
+    sync::Arc,
     thread,
 };
 
@@ -26,21 +27,26 @@ impl Server {
 
     pub fn run<F, G>(&self, success_handler: F, fail_handler: G)
     where
-        F: Fn(TcpStream) + Send + Copy + 'static,
-        G: Fn(Error) + Send + Copy + 'static,
+        F: Fn(TcpStream) + Send + Sync + 'static,
+        G: Fn(Error) + Send + Sync + 'static,
     {
         println!("Server running at {}", self.address);
+
+        let success_handler = std::sync::Arc::new(success_handler);
+        let fail_handler = std::sync::Arc::new(fail_handler);
 
         for stream in self.listener.incoming() {
             match stream {
                 Ok(stream) => {
+                    let handler = Arc::clone(&success_handler);
                     thread::spawn(move || {
-                        success_handler(stream);
+                        handler(stream);
                     });
                 }
                 Err(e) => {
+                    let handler = Arc::clone(&fail_handler);
                     thread::spawn(move || {
-                        fail_handler(e);
+                        handler(e);
                     });
                 }
             }

@@ -1,4 +1,10 @@
-use std::{io::Error, net::TcpStream};
+use std::{
+    io::Error,
+    net::TcpStream,
+    sync::{Arc, RwLock},
+};
+
+use crate::libs::net::request::{Request, RequestType};
 
 use super::{
     app::store::Store,
@@ -8,7 +14,7 @@ use super::{
 pub struct Node {
     client: Client,
     server: Server,
-    pub store: Store,
+    pub store: Arc<RwLock<Store>>,
 }
 
 impl Node {
@@ -16,7 +22,7 @@ impl Node {
         return Node {
             client: Client::new(),
             server: Server::new(input),
-            store: Store::new(),
+            store: Arc::new(RwLock::new(Store::new())),
         };
     }
 
@@ -26,15 +32,38 @@ impl Node {
     }
 
     pub fn run(&self) {
-        fn success_handler(stream: TcpStream) {
+        let store_clone = Arc::clone(&self.store);
+
+        let success_handler = move |stream: TcpStream| {
             println!(
                 "Accepted a connection from: {:?}",
                 stream.peer_addr().unwrap()
             );
-        }
-        fn fail_handler(e: Error) {
+
+            if let Some(request) = Request::parse(stream) {
+                match request.reqtype {
+                    RequestType::GET => {
+                        let value = store_clone.read().unwrap().get(&request.key);
+                        println!("{value}");
+                    }
+                    RequestType::SET => {
+                        store_clone.write().unwrap().set(
+                            &request.key.clone(),
+                            &request.val.clone().unwrap_or_default(),
+                        );
+                    }
+                    RequestType::REMOVE => {
+                        store_clone.write().unwrap().remove(&request.key);
+                    }
+                }
+            } else {
+                eprintln!("Bad command received");
+            }
+        };
+
+        let fail_handler = |e: Error| {
             eprintln!("Failed to accept connection: {}", e);
-        }
+        };
 
         self.server.run(success_handler, fail_handler);
     }

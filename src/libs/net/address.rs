@@ -1,10 +1,12 @@
 use core::fmt;
 
+// ---AddressInput---
 pub enum AddressInput {
     IpAndPort(String, u16),
     Address(Address),
 }
 
+// ---Address---
 pub struct Address {
     pub ip: String,
     pub port: u16,
